@@ -17,7 +17,7 @@ DEVICE = 4
 SOCKET_PATH = "/tmp/anya.sock"
 
 print("Anya: Loading model...")
-model = WhisperModel("tiny", device="cpu", compute_type="int8")
+model = WhisperModel("small", device="cpu", compute_type="int8")
 print("Anya: Model ready.")
 
 def record_audio():
@@ -26,7 +26,7 @@ def record_audio():
     wav.write("/tmp/anya_input.wav", SAMPLE_RATE, audio)
 
 def transcribe():
-    segments, _ = model.transcribe("/tmp/anya_input.wav", language="hi", beam_size=1)
+    segments, _ = model.transcribe("/tmp/anya_input.wav", language="en", beam_size=1)
     text = " ".join([s.text for s in segments])
     return text
 
