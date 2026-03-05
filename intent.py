@@ -1,18 +1,13 @@
+from app_discovery import discover_apps
+
 OPEN_KEYWORDS = ["kholo", "khol", "open", "start", "chalo", "chalao"]
 CLOSE_KEYWORDS = ["band", "bandh", "close", "kill", "stop", "bnd"]
 
-APP_MAP = {
-    "firefox": "firefox",
-    "spotify": "spotify",
-    "terminal": "kitty",
-    "vscode": "codium",
-    "vscodium": "codium",
-    "files": "nautilus",
-}
+APP_MAP = discover_apps()
 
 def parse_intent(text):
     text = text.lower().strip()
-    
+
     action = None
     target = None
 
