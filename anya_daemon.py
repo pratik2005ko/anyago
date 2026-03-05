@@ -38,6 +38,7 @@ class AnyaLauncher(QWidget):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_NoSystemBackground)
         self.setFixedSize(520, 72)
         screen = QApplication.desktop().screenGeometry()
         self.move(screen.width()//2 - 260, screen.height()//2 - 36)
@@ -72,6 +73,8 @@ class AnyaLauncher(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setCompositionMode(QPainter.CompositionMode_Source)
+        painter.fillRect(self.rect(), Qt.transparent)
 
         w, h = self.width(), self.height()
         border = 3
