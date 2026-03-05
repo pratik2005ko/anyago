@@ -1,3 +1,4 @@
+from intent import parse_intent
 import sys
 import threading
 import subprocess
@@ -29,11 +30,8 @@ class AnyaLauncher(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setFixedSize(400, 80)
-
-        # center on screen
         screen = QApplication.desktop().screenGeometry()
         self.move(screen.width()//2 - 200, screen.height()//2 - 40)
-
         self.label = QLabel("🎙 Listening...", self)
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setFixedSize(400, 80)
@@ -51,6 +49,13 @@ class AnyaLauncher(QWidget):
     def listen_and_close(self):
         record_audio()
         text = transcribe()
+        action, target = parse_intent(text)
+        print(f"Action: {action} | Target: {target}")
+        if action and target:
+            if action == "open":
+                subprocess.Popen([target])
+            elif action == "close":
+                subprocess.run(["pkill", "-f", target])
         QApplication.quit()
 
 app = QApplication(sys.argv)
