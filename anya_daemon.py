@@ -71,15 +71,19 @@ class AnyaLauncher(QWidget):
         action, target = parse_intent(text)
 
         if action and target:
-            app_name = target.split("/")[-1]
-            if action == "open":
+            if action == "web":
+                self.set_text(f"🌐 Opening {target}...")
+                time.sleep(0.8)
+                subprocess.Popen(["firefox", target])
+            elif action == "open":
+                app_name = target.split("/")[-1]
                 self.set_text(f"⚡ Opening {app_name}...")
-            elif action == "close":
-                self.set_text(f"🛑 Closing {app_name}...")
-            time.sleep(0.8)
-            if action == "open":
+                time.sleep(0.8)
                 subprocess.Popen([target])
             elif action == "close":
+                app_name = target.split("/")[-1]
+                self.set_text(f"🛑 Closing {app_name}...")
+                time.sleep(0.8)
                 subprocess.run(["pkill", "-f", target])
         else:
             self.set_text("❓ Samajh nahi aaya")
