@@ -28,6 +28,9 @@ def parse_intent(text):
     text = re.sub(r'\s+', ' ', text)
 
     words = text.split()
+    
+    if not words:
+        return None, None
 
     # web prefix
     if words[0] == WEB_KEYWORD and len(words) > 1:

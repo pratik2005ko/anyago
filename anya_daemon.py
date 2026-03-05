@@ -1,3 +1,4 @@
+from PyQt5.QtCore import Qt, QMetaObject, Q_ARG, pyqtSignal, QObject, QTimer, pyqtSlot
 from intent import parse_intent
 import sys
 import threading
@@ -5,11 +6,13 @@ import subprocess
 import sounddevice as sd
 import scipy.io.wavfile as wav
 from faster_whisper import WhisperModel
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget
-from PyQt5.QtCore import Qt, QMetaObject, Q_ARG, pyqtSignal, QObject
+from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtCore import Qt, QMetaObject, Q_ARG, pyqtSignal, QObject, QTimer, pyqtProperty
+from PyQt5.QtGui import QPainter, QColor, QLinearGradient, QFont, QPen
 import socket
 import os
 import time
+import math
 
 SAMPLE_RATE = 44100
 DURATION = 2
@@ -30,32 +33,102 @@ def transcribe():
     text = " ".join([s.text for s in segments])
     return text
 
-class Communicator(QObject):
-    trigger = pyqtSignal()
-
-comm = Communicator()
-
 class AnyaLauncher(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedSize(500, 80)
+        self.setFixedSize(520, 72)
         screen = QApplication.desktop().screenGeometry()
-        self.move(screen.width()//2 - 250, screen.height()//2 - 40)
+        self.move(screen.width()//2 - 260, screen.height()//2 - 36)
 
-        self.label = QLabel("🎙 Listening...", self)
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setFixedSize(500, 80)
-        self.label.setStyleSheet("""
-            background-color: #1e1e2e;
-            color: #cdd6f4;
-            font-size: 22px;
-            border-radius: 16px;
-        """)
+        self.text = "🎙  Listening..."
+        self.state = "listening"
+        self._angle = 0.0
+        self._breath = 0.0
+        self._breath_dir = 1
+
+        # animation timer
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._animate)
+        self.timer.start(16)  # 60fps
+
+    def _animate(self):
+        if self.state == "listening":
+            self._breath += 0.03 * self._breath_dir
+            if self._breath >= 1.0:
+                self._breath_dir = -1
+            elif self._breath <= 0.0:
+                self._breath_dir = 1
+        elif self.state in ["opening", "closing", "web"]:
+            self._angle = (self._angle + 4) % 360
+        self.update()
+
+    def set_state(self, state, text):
+        self.state = state
+        self.text = text
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        w, h = self.width(), self.height()
+        border = 3
+        radius = h // 2
+
+        # state colors
+        if self.state == "listening":
+            alpha = int(120 + 100 * self._breath)
+            colors = [
+                QColor(100, 80, 255, alpha),
+                QColor(180, 60, 255, alpha),
+                QColor(80, 160, 255, alpha),
+            ]
+        elif self.state == "heard":
+            colors = [QColor(0, 200, 255), QColor(0, 255, 200)]
+        elif self.state in ["opening", "web"]:
+            colors = [QColor(0, 255, 120), QColor(0, 200, 255)]
+        elif self.state == "closing":
+            colors = [QColor(255, 80, 80), QColor(255, 150, 0)]
+        else:
+            colors = [QColor(255, 60, 60), QColor(200, 0, 100)]
+
+        # animated gradient border
+        angle_rad = math.radians(self._angle)
+        cx, cy = w / 2, h / 2
+        grad = QLinearGradient(
+            cx + math.cos(angle_rad) * w,
+            cy + math.sin(angle_rad) * h,
+            cx + math.cos(angle_rad + math.pi) * w,
+            cy + math.sin(angle_rad + math.pi) * h
+        )
+        for i, color in enumerate(colors):
+            grad.setColorAt(i / max(len(colors) - 1, 1), color)
+
+        painter.setPen(QPen(grad, border * 2))
+        painter.drawRoundedRect(border, border, w - border*2, h - border*2, radius, radius)
+
+        # inner background
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(18, 18, 28, 240))
+        painter.drawRoundedRect(border*2, border*2, w - border*4, h - border*4, radius-2, radius-2)
+
+        # text
+        painter.setPen(QColor(210, 220, 255))
+        font = QFont("monospace", 16)
+        font.setWeight(QFont.Medium)
+        painter.setFont(font)
+        painter.drawText(self.rect(), Qt.AlignCenter, self.text)
+
+        painter.end()
 
     def set_text(self, text):
-        QMetaObject.invokeMethod(self.label, "setText", Qt.QueuedConnection, Q_ARG(str, text))
+        QMetaObject.invokeMethod(self, "_update_text", Qt.QueuedConnection, Q_ARG(str, text))
+
+    def _update_text(self, text):
+        self.text = text
+        self.update()
 
     def start_listening(self):
         t = threading.Thread(target=self.listen_and_close)
@@ -65,35 +138,51 @@ class AnyaLauncher(QWidget):
         record_audio()
         text = transcribe()
 
-        self.set_text(f'🗣 "{text}"')
+        QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                  Q_ARG(str, "heard"), Q_ARG(str, f'🗣  "{text}"'))
         time.sleep(0.8)
 
         action, target = parse_intent(text)
 
         if action and target:
             if action == "web":
-                self.set_text(f"🌐 Opening {target}...")
+                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                          Q_ARG(str, "web"), Q_ARG(str, f"🌐  {target}"))
                 time.sleep(0.8)
                 subprocess.Popen(["firefox", target])
             elif action == "open":
                 app_name = target.split("/")[-1]
-                self.set_text(f"⚡ Opening {app_name}...")
+                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                          Q_ARG(str, "opening"), Q_ARG(str, f"⚡  Opening {app_name}..."))
                 time.sleep(0.8)
                 subprocess.Popen([target])
             elif action == "close":
                 app_name = target.split("/")[-1]
-                self.set_text(f"🛑 Closing {app_name}...")
+                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                          Q_ARG(str, "closing"), Q_ARG(str, f"🛑  Closing {app_name}..."))
                 time.sleep(0.8)
                 subprocess.run(["pkill", "-f", target])
         else:
-            self.set_text("❓ Samajh nahi aaya")
+            QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                      Q_ARG(str, "error"), Q_ARG(str, "❓  Samajh nahi aaya"))
             time.sleep(1.2)
 
-        self.hide()
+        QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
+    @pyqtSlot(str, str)
+    def _set_state_slot(self, state, text):
+        self.state = state
+        self.text = text
+        self.update()
+
+
+class Communicator(QObject):
+    trigger = pyqtSignal()
+
+comm = Communicator()
 
 def on_trigger():
+    window.set_state("listening", "🎙  Listening...")
     window.show()
-    window.set_text("🎙 Listening...")
     window.start_listening()
 
 comm.trigger.connect(on_trigger)
