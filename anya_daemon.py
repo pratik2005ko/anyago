@@ -12,7 +12,7 @@ import os
 import time
 
 SAMPLE_RATE = 44100
-DURATION = 4
+DURATION = 2
 DEVICE = 4
 SOCKET_PATH = "/tmp/anya.sock"
 
