@@ -1,8 +1,9 @@
 {
-    "code": "vscodium",
+    "market": "bazaar",
+    "files": "files",
     "fire": "firefox",
     "music": "harmony music",
-    "files": "files",
-    "term": "kitty",
-    "terminal": "kitty"
+    "terminal": "kitty",
+    "paint": "krita",
+    "code": "vscodium"
 }
