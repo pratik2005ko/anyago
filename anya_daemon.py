@@ -22,7 +22,12 @@ CLOSE_SOCKET_PATH = "/tmp/anya_close.sock"
 print("Anya: Loading model...")
 model = WhisperModel("small", device="cpu", compute_type="int8")
 print("Anya: Model ready.")
-
+subprocess.Popen([
+    "notify-send", 
+    "Anya Ready 🎙",
+    "Alt+Space se activate karo",
+    "--urgency=normal"
+])
 
 def record_audio():
     audio = sd.rec(int(DURATION * SAMPLE_RATE), samplerate=SAMPLE_RATE,
@@ -183,6 +188,8 @@ class AnyaLauncher(QWidget):
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                                      Q_ARG(str, "error"), Q_ARG(str, "❓  Samajh nahi aaya"))
             time.sleep(1.2)
+        global is_active
+        is_active = False
 
         QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
 
@@ -240,7 +247,13 @@ class Communicator(QObject):
 comm = Communicator()
 
 
+is_active = False
+
 def on_trigger():
+    global is_active
+    if is_active:
+        return
+    is_active = True
     window.set_state("listening", "🎙  Listening...")
     window.show()
     window.start_listening()

@@ -1,9 +1,13 @@
 {
+    "book": "affine",
     "market": "bazaar",
-    "files": "files",
+    "status": "btop++",
+    "manager": "files",
     "fire": "firefox",
+    "photo": "gthumb",
     "music": "harmony music",
     "terminal": "kitty",
     "paint": "krita",
+    "mirror": "scrcpygui_3.4.3_amd64_71cfffa5713ab0a4af03b8b22a9dbe50",
     "code": "vscodium"
 }
