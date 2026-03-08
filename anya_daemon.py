@@ -27,7 +27,15 @@ log = logging.getLogger("daemon")
 
 SAMPLE_RATE = 44100
 DURATION = 2
-DEVICE = 4
+def get_audio_device():
+    import sounddevice as sd 
+    devices = sd.query_devices()
+    for i, dev in enumerate(devices):
+        if "alsa_input.pci-0000_05_00.6" in dev['name']:
+            return i
+    return sd.default.device[0]
+
+DEVICE = get_audio_device()
 SOCKET_PATH = "/tmp/anya.sock"
 
 print("Anya: Loading model...")
