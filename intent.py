@@ -1,3 +1,4 @@
+from rapidfuzz import process, fuzz
 from app_discovery import discover_apps
 import json
 import os
@@ -43,7 +44,7 @@ def parse_intent(text):
         return "settings", None
 
     for cmd, action_cmd in SYSTEM_COMMANDS.items():
-        if cmd in text:
+        if re.search(rf'\b{cmd}\b', text):
             return "system", action_cmd
 
     if words[0] == WEB_KEYWORD and len(words) > 1:
@@ -75,10 +76,9 @@ def parse_intent(text):
             break
 
     if not target:
-        for app_name in APP_MAP:
-            if app_name in text:
-                target = APP_MAP[app_name]
-                break
+        match, score, _ = process.extractOne(text, APP_MAP.keys(), scorer=fuzz.WRatio)
+        if score > 85:
+            target = APP_MAP[match]
 
     if target and not action:
         action = "open"
