@@ -3,6 +3,8 @@ from app_discovery import discover_apps
 import json
 import os
 import re
+import logging
+log = logging get logger("intent")
 
 OPEN_KEYWORDS = ["open", "start", "launch"]
 CLOSE_KEYWORDS = ["close", "kill", "stop", "band", "bandh"]
@@ -83,4 +85,5 @@ def parse_intent(text):
     if target and not action:
         action = "open"
 
+    log.info(f"parse | action={action} | target={target}")
     return action, target
