@@ -12,6 +12,7 @@ import sys
 
 ALIASES_PATH = os.path.expanduser("~/anyago/aliases.json")
 
+
 def load_aliases():
     try:
         with open(ALIASES_PATH, 'r') as f:
@@ -19,9 +20,11 @@ def load_aliases():
     except:
         return {}
 
+
 def save_aliases(aliases):
     with open(ALIASES_PATH, 'w') as f:
         json.dump(aliases, f, indent=4)
+
 
 class SettingsWindow(QWidget):
     def __init__(self):
@@ -87,8 +90,12 @@ class SettingsWindow(QWidget):
         container_layout = QVBoxLayout(container)
         container_layout.setSpacing(8)
 
-        # reverse aliases — app_name → hotword
-        reverse_aliases = {v: k for k, v in self.aliases.items()}
+        # reverse aliases — multihotwords per app
+        reverse_aliases = {}
+        for hotword, app_name in self.aliases.items():
+            if app_name not in reverse_aliases:
+                reverse_aliases[app_name] = []
+            reverse_aliases[app_name].append(hotword)
 
         for app_name, cmd in sorted(self.apps.items()):
             row = QHBoxLayout()
@@ -103,7 +110,7 @@ class SettingsWindow(QWidget):
 
             # prefill if alias exists
             if app_name in reverse_aliases:
-                inp.setText(reverse_aliases[app_name])
+                inp.setText(", ".join(reverse_aliases[app_name]))
 
             self.inputs[app_name] = inp
 
@@ -122,24 +129,28 @@ class SettingsWindow(QWidget):
         main_layout.addWidget(self.save_btn)
 
     def save(self):
-        new_aliases = {} 
+        new_aliases = {}
         for app_name, inp in self.inputs.items():
             hotword = inp.text().strip().lower()
             if hotword:
-                new_aliases[hotword] = app_name
+                for hw in hotword.split(","):
+                    hw = hw.strip()
+                    if hw:
+                        new_aliases[hw] = app_name
         save_aliases(new_aliases)
-        
+
         try:
             import socket as sock
             client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
-            client.connect("temp/anya.sock")
-            client.sendall(b,"RELOAD")
+            client.connect("tmp/anya.sock")
+            client.sendall(b"RELOAD")
             client.close()
         except:
             pass
-        
+
         self.save_btn.setText("✓ Saved!")
         QTimer.singleShot(2000, lambda: self.save_btn.setText("Save Hotwords"))
+
 
 app = QApplication(sys.argv)
 window = SettingsWindow()
