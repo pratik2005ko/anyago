@@ -13,8 +13,9 @@ import socket
 import os
 import time
 import math
-LOG_PATH = os.expanduser("~/.local/share/anya/logs.txt")
-os.makedirs(os.path.dirname(LOG_PATH), exist_ok=true)
+import logging
+LOG_PATH = os.path.expanduser("~/.local/share/anya/logs.txt")
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok = True)
 
 logging.basicConfig(
     filename=LOG_PATH,
@@ -22,7 +23,7 @@ logging.basicConfig(
     format="%(asctime)s | daemon | %(message)s" ,
     datefmt="%Y-%m-%d %H:%M:%S"
 )
-log = logging.getlogger("daemon")
+log = logging.getLogger("daemon")
 
 SAMPLE_RATE = 44100
 DURATION = 2
@@ -155,7 +156,7 @@ class AnyaLauncher(QWidget):
         log.info("record | Started")
         record_audio()
         text = transcribe()
-        log.info("transcribe | Text: {text!r}")
+        log.info(f"transcribe | Text: {text!r}")
 
         if not text.strip():
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,

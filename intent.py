@@ -4,7 +4,7 @@ import json
 import os
 import re
 import logging
-log = logging get logger("intent")
+log = logging.getLogger("intent")
 
 OPEN_KEYWORDS = ["open", "start", "launch"]
 CLOSE_KEYWORDS = ["close", "kill", "stop", "band", "bandh"]
