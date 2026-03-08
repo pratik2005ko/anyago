@@ -1,3 +1,4 @@
+import shlex
 from intent import parse_intent, APP_MAP, ALIASES
 import sys
 import threading
@@ -182,7 +183,7 @@ class AnyaLauncher(QWidget):
                 QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                              Q_ARG(str, "closing"), Q_ARG(str, f"⚙  {target}..."))
                 time.sleep(0.8)
-                subprocess.run(target.split())
+                subprocess.run(shlex.split(target))
                 QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
         else:
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
