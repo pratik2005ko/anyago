@@ -13,6 +13,16 @@ import socket
 import os
 import time
 import math
+LOG_PATH = os.expanduser("~/.local/share/anya/logs.txt")
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok=true)
+
+logging.basicConfig(
+    filename=LOG_PATH,
+    level=logging.INFO,
+    format="%(asctime)s | daemon | %(message)s" ,
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+log = logging.getlogger("daemon")
 
 SAMPLE_RATE = 44100
 DURATION = 2
@@ -142,8 +152,10 @@ class AnyaLauncher(QWidget):
         t.start()
 
     def listen_and_close(self):
+        log.info("record | Started")
         record_audio()
         text = transcribe()
+        log.info("transcribe | Text: {text!r}")
 
         if not text.strip():
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
@@ -157,6 +169,7 @@ class AnyaLauncher(QWidget):
         time.sleep(0.8)
 
         action, target = parse_intent(text)
+        log.info(f"intent | Action: {action} | Target: {target}")
 
         if action == "settings":
             subprocess.Popen(["python", os.path.expanduser("~/anyago/anya_settings.py")])
@@ -195,8 +208,12 @@ class AnyaLauncher(QWidget):
         QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
 
     def close_and_done(self):
+        log.info("record | Close trigger received")
         record_audio()
+        log.info("record | Done")
+        
         text = transcribe()
+        log.info(f"transcribe | Text: {text!r}")
 
         if not text.strip():
             QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
@@ -222,11 +239,13 @@ class AnyaLauncher(QWidget):
 
         if target:
             app_name = target.split("/")[-1]
+            log.info(f"close | Target: {target}")
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                                      Q_ARG(str, "closing"), Q_ARG(str, f"🛑  Closing {app_name}..."))
             time.sleep(0.8)
             subprocess.run(["pkill", "-f", target])
         else:
+            log.info("close | No target found")
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                                      Q_ARG(str, "error"), Q_ARG(str, "❓  App nahi mila"))
             time.sleep(1.2)
