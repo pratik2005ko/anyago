@@ -128,6 +128,16 @@ class SettingsWindow(QWidget):
             if hotword:
                 new_aliases[hotword] = app_name
         save_aliases(new_aliases)
+        
+        try:
+            import socket as sock
+            client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+            client.connect("temp/anya.sock")
+            client.sendall(b,"RELOAD")
+            client.close()
+        except:
+            pass
+        
         self.save_btn.setText("✓ Saved!")
         QTimer.singleShot(2000, lambda: self.save_btn.setText("Save Hotwords"))
 

@@ -29,7 +29,6 @@ SAMPLE_RATE = 44100
 DURATION = 2
 DEVICE = 4
 SOCKET_PATH = "/tmp/anya.sock"
-CLOSE_SOCKET_PATH = "/tmp/anya_close.sock"
 
 print("Anya: Loading model...")
 model = WhisperModel("small", device="cpu", compute_type="int8")
@@ -147,10 +146,11 @@ class AnyaLauncher(QWidget):
     def start_listening(self):
         t = threading.Thread(target=self.listen_and_close)
         t.start()
-
+        
     def start_close_listening(self):
         t = threading.Thread(target=self.close_and_done)
         t.start()
+
 
     def listen_and_close(self):
         log.info("record | Started")
@@ -296,24 +296,21 @@ def socket_listener():
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(SOCKET_PATH)
     server.listen(1)
+    log.info("socket | Listening on anya.sock")
     print("Anya: Waiting for trigger...")
     while True:
         conn, _ = server.accept()
+        data = conn.recv(16).decode().strip()
         conn.close()
-        comm.trigger.emit()
-
-
-def close_socket_listener():
-    if os.path.exists(CLOSE_SOCKET_PATH):
-        os.remove(CLOSE_SOCKET_PATH)
-    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server.bind(CLOSE_SOCKET_PATH)
-    server.listen(1)
-    print("Anya: Close listener ready...")
-    while True:
-        conn, _ = server.accept()
-        conn.close()
-        comm.close_trigger.emit()
+        if data =="TRIGGER":
+            comm.trigger.emit()
+        elif data == "CLOSE":
+            comm.close_trigger.emit()
+        elif data == "RELOAD":
+            from intent import reload_context
+            reload_context()
+            log.info("socket | Context reloaded")
+            
 
 
 app = QApplication(sys.argv)
@@ -321,8 +318,5 @@ window = AnyaLauncher()
 
 t = threading.Thread(target=socket_listener, daemon=True)
 t.start()
-
-t2 = threading.Thread(target=close_socket_listener, daemon=True)
-t2.start()
 
 sys.exit(app.exec_())
