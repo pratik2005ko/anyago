@@ -25,11 +25,12 @@ logging.basicConfig(
 )
 log = logging.getLogger("daemon")
 
-SAMPLE_RATE = 44100
+SAMPLE_RATE = 16000
 DURATION = 2
 
 
 def get_audio_device():
+    return 4
     import sounddevice as sd
     devices = sd.query_devices()
     for i, dev in enumerate(devices):

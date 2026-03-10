@@ -1,5 +1,7 @@
 {
+    "clean": "add/remove software",
     "book": "affine",
+    "agent": "anythingllm (1.11.1)",
     "market": "bazaar",
     "status": "btop++",
     "manager": "files",
