@@ -15,25 +15,28 @@ import time
 import math
 import logging
 LOG_PATH = os.path.expanduser("~/.local/share/anya/logs.txt")
-os.makedirs(os.path.dirname(LOG_PATH), exist_ok = True)
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
 logging.basicConfig(
     filename=LOG_PATH,
     level=logging.INFO,
-    format="%(asctime)s | daemon | %(message)s" ,
+    format="%(asctime)s | daemon | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 log = logging.getLogger("daemon")
 
 SAMPLE_RATE = 44100
 DURATION = 2
+
+
 def get_audio_device():
-    import sounddevice as sd 
+    import sounddevice as sd
     devices = sd.query_devices()
     for i, dev in enumerate(devices):
         if "alsa_input.pci-0000_05_00.6" in dev['name']:
             return i
     return sd.default.device[0]
+
 
 DEVICE = get_audio_device()
 SOCKET_PATH = "/tmp/anya.sock"
@@ -42,11 +45,12 @@ print("Anya: Loading model...")
 model = WhisperModel("small", device="cpu", compute_type="int8")
 print("Anya: Model ready.")
 subprocess.Popen([
-    "notify-send", 
+    "notify-send",
     "Anya Ready 🎙",
     "Alt+Space se activate karo",
     "--urgency=normal"
 ])
+
 
 def record_audio():
     audio = sd.rec(int(DURATION * SAMPLE_RATE), samplerate=SAMPLE_RATE,
@@ -154,73 +158,71 @@ class AnyaLauncher(QWidget):
     def start_listening(self):
         t = threading.Thread(target=self.listen_and_close)
         t.start()
-        
+
     def start_close_listening(self):
         t = threading.Thread(target=self.close_and_done)
         t.start()
 
-
     def listen_and_close(self):
-        log.info("record | Started")
-        record_audio()
-        text = transcribe()
-        log.info(f"transcribe | Text: {text!r}")
-
-        if not text.strip():
-            QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
-                                     Q_ARG(str, "error"), Q_ARG(str, "❓  Try again..."))
-            time.sleep(1.2)
-            QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
-            return
-
-        QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
-                                 Q_ARG(str, "heard"), Q_ARG(str, f'🗣  "{text}"'))
-        time.sleep(0.8)
-
-        action, target = parse_intent(text)
-        log.info(f"intent | Action: {action} | Target: {target}")
-
-        if action == "settings":
-            subprocess.Popen(["python", os.path.expanduser("~/anyago/anya_settings.py")])
-            QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
-        elif action and target:
-            if action == "web":
-                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
-                                         Q_ARG(str, "web"), Q_ARG(str, f"🌐  {target}"))
-                time.sleep(0.8)
-                subprocess.Popen(["firefox", target])
-            elif action == "open":
-                app_name = target.split("/")[-1]
-                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
-                                         Q_ARG(str, "opening"), Q_ARG(str, f"⚡  Opening {app_name}..."))
-                time.sleep(0.8)
-                subprocess.Popen([target])
-            elif action == "close":
-                app_name = target.split("/")[-1]
-                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
-                                         Q_ARG(str, "closing"), Q_ARG(str, f"🛑  Closing {app_name}..."))
-                time.sleep(0.8)
-                subprocess.run(["pkill", "-f", target])
-            elif action == "system":
-                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
-                             Q_ARG(str, "closing"), Q_ARG(str, f"⚙  {target}..."))
-                time.sleep(0.8)
-                subprocess.run(shlex.split(target))
-                QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
-        else:
-            QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
-                                     Q_ARG(str, "error"), Q_ARG(str, "❓  Samajh nahi aaya"))
-            time.sleep(1.2)
         global is_active
-        is_active = False
+        try:
+            log.info("record | Started")
+            record_audio()
+            text = transcribe()
+            log.info(f"transcribe | Text: {text!r}")
 
-        QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
+            if not text.strip():
+                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                         Q_ARG(str, "error"), Q_ARG(str, "❓  Try again..."))
+                time.sleep(1.2)
+                return
 
+            QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                     Q_ARG(str, "heard"), Q_ARG(str, f'🗣  "{text}"'))
+            time.sleep(0.8)
+
+            action, target = parse_intent(text)
+            log.info(f"intent | Action: {action} | Target: {target}")
+
+            if action == "settings":
+                subprocess.Popen(["python", os.path.expanduser("~/anyago/anya_settings.py")])
+            elif action and target:
+                if action == "web":
+                    QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                             Q_ARG(str, "web"), Q_ARG(str, f"🌐  {target}"))
+                    time.sleep(0.8)
+                    subprocess.Popen(["firefox", target])
+                elif action == "open":
+                    app_name = target.split("/")[-1]
+                    QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                             Q_ARG(str, "opening"), Q_ARG(str, f"⚡  Opening {app_name}..."))
+                    time.sleep(0.8)
+                    subprocess.Popen([target])
+                elif action == "close":
+                    app_name = target.split("/")[-1]
+                    QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                             Q_ARG(str, "closing"), Q_ARG(str, f"🛑  Closing {app_name}..."))
+                    time.sleep(0.8)
+                    subprocess.run(["pkill", "-f", target])
+                elif action == "system":
+                    QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                 Q_ARG(str, "closing"), Q_ARG(str, f"⚙  {target}..."))
+                    time.sleep(0.8)
+                    subprocess.run(shlex.split(target))
+            else:
+                log.warning(f"intent | FAILED — raw text: {text!r}")
+                QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
+                                         Q_ARG(str, "error"), Q_ARG(str, "❓  Samajh nahi aaya"))
+                time.sleep(1.2)
+        finally:
+            is_active = False
+            QMetaObject.invokeMethod(self, "hide", Qt.QueuedConnection)
+        
     def close_and_done(self):
         log.info("record | Close trigger received")
         record_audio()
         log.info("record | Done")
-        
+
         text = transcribe()
         log.info(f"transcribe | Text: {text!r}")
 
@@ -278,6 +280,7 @@ comm = Communicator()
 
 is_active = False
 
+
 def on_trigger():
     global is_active
     if is_active:
@@ -310,7 +313,8 @@ def socket_listener():
         conn, _ = server.accept()
         data = conn.recv(16).decode().strip()
         conn.close()
-        if data =="TRIGGER":
+        if data == "TRIGGER":
+            log.info("socket | TRIGGER received")
             comm.trigger.emit()
         elif data == "CLOSE":
             comm.close_trigger.emit()
@@ -318,7 +322,6 @@ def socket_listener():
             from intent import reload_context
             reload_context()
             log.info("socket | Context reloaded")
-            
 
 
 app = QApplication(sys.argv)
