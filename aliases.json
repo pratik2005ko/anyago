@@ -1,15 +1,19 @@
 {
     "clean": "add/remove software",
-    "book": "affine",
+    "book": "affine (0.26.3)",
     "agent": "anythingllm (1.11.1)",
     "market": "bazaar",
     "status": "btop++",
     "manager": "files",
     "fire": "firefox",
+    "download": "gopeed",
     "photo": "gthumb",
-    "music": "harmony music",
     "terminal": "kitty",
     "paint": "krita",
+    "wolf": "librewolf",
+    "office": "onlyoffice",
     "mirror": "scrcpygui_3.4.3_amd64_71cfffa5713ab0a4af03b8b22a9dbe50",
-    "code": "vscodium"
+    "copy": "siyuan",
+    "vibe": "spotify",
+    "editor": "vscodium"
 }

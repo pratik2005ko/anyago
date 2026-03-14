@@ -32,6 +32,11 @@ def load_aliases():
 
 ALIASES = load_aliases()
 
+def reload_context():
+    global APP_MAP, ALIASES
+    APP_MAP = discover_apps()
+    ALIASES = load_aliases()
+
 def parse_intent(text):
     text = text.lower().strip()
     text = re.sub(r'[^\w\s]', '', text)
@@ -78,9 +83,15 @@ def parse_intent(text):
             break
 
     if not target:
-        match, score, _ = process.extractOne(text, APP_MAP.keys(), scorer=fuzz.WRatio)
-        if score > 85:
-            target = APP_MAP[match]
+        # action keywords strip karo — sirf app name fuzzy match karo
+        noise = set(OPEN_KEYWORDS + CLOSE_KEYWORDS)
+        query = " ".join(w for w in words if w not in noise).strip()
+
+        if query:
+            match, score, _ = process.extractOne(query, APP_MAP.keys(), scorer=fuzz.WRatio)
+            log.info(f"fuzzy | query={query!r} | match={match!r} | score={score}")
+            if score > 75:
+                target = APP_MAP[match]
 
     if target and not action:
         action = "open"

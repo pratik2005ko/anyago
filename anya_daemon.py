@@ -8,7 +8,7 @@ import scipy.io.wavfile as wav
 from faster_whisper import WhisperModel
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import Qt, QMetaObject, Q_ARG, pyqtSignal, QObject, QTimer, pyqtSlot
-from PyQt5.QtGui import QPainter, QColor, QLinearGradient, QFont, QPen
+from PyQt5.QtGui import QPainter, QColor, QLinearGradient, QFont, QPen ,QIcon
 import socket
 import os
 import time
@@ -194,17 +194,18 @@ class AnyaLauncher(QWidget):
                     time.sleep(0.8)
                     subprocess.Popen(["firefox", target])
                 elif action == "open":
-                    app_name = target.split("/")[-1]
+                    app_name = target.split("/")[-1].split()[-1]  # flatpak: last part = app id
                     QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                                              Q_ARG(str, "opening"), Q_ARG(str, f"⚡  Opening {app_name}..."))
                     time.sleep(0.8)
-                    subprocess.Popen([target])
+                    subprocess.Popen(shlex.split(target))  # handles "flatpak run com.app.Name"
                 elif action == "close":
-                    app_name = target.split("/")[-1]
+                    app_name = target.split("/")[-1].split()[-1]
                     QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                                              Q_ARG(str, "closing"), Q_ARG(str, f"🛑  Closing {app_name}..."))
                     time.sleep(0.8)
-                    subprocess.run(["pkill", "-f", target])
+                    # flatpak: pkill by app-id (last word); normal: pkill by binary
+                    subprocess.run(["pkill", "-f", target.split()[-1]])
                 elif action == "system":
                     QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                                  Q_ARG(str, "closing"), Q_ARG(str, f"⚙  {target}..."))
@@ -250,12 +251,12 @@ class AnyaLauncher(QWidget):
                     break
 
         if target:
-            app_name = target.split("/")[-1]
+            app_name = target.split("/")[-1].split()[-1]
             log.info(f"close | Target: {target}")
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
                                      Q_ARG(str, "closing"), Q_ARG(str, f"🛑  Closing {app_name}..."))
             time.sleep(0.8)
-            subprocess.run(["pkill", "-f", target])
+            subprocess.run(["pkill", "-f", target.split()[-1]])
         else:
             log.info("close | No target found")
             QMetaObject.invokeMethod(self, "_set_state_slot", Qt.QueuedConnection,
@@ -290,8 +291,7 @@ def on_trigger():
     window.set_state("listening", "🎙  Listening...")
     window.show()
     window.start_listening()
-
-
+    
 def on_close_trigger():
     window.set_state("closing", "🛑  Close what?")
     window.show()
@@ -326,6 +326,7 @@ def socket_listener():
 
 
 app = QApplication(sys.argv)
+app.setWindowIcon(QIcon("/home/pratik/anyago/anya_icon.png"))
 window = AnyaLauncher()
 
 t = threading.Thread(target=socket_listener, daemon=True)
